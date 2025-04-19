@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Parking System</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f7f6;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    .form-container {
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    label, button, select, input {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+      border: none;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .slot-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .slot {
+      width: 120px;
+      height: 120px;
+      background-color: #f0f0f0;
+      margin: 10px;
+      text-align: center;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      font-size: 18px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .available {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .booked {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .available:hover {
+      background-color: #218838;
+    }
+
+    .booked:hover {
+      background-color: #c82333;
+    }
+
+    .status {
+      text-align: center;
+      font-size: 18px;
+      margin-top: 20px;
+    }
+
+    .notification {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      border-radius: 5px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Smart Parking System</h1>
+
+  <div class="form-container">
+    <label for="numSlots">Enter number of parking slots:</label>
+    <input type="number" id="numSlots" placeholder="Enter number of slots" required>
+
+    <label for="vehicleType">Select Vehicle Type:</label>
+    <select id="vehicleType">
+      <option value="Car">Car</option>
+      <option value="Bike">Bike</option>
+      <option value="Truck">Truck</option>
+    </select>
+
+    <label for="startTime">Start Time:</label>
+    <input type="datetime-local" id="startTime" required>
+
+    <label for="endTime">End Time:</label>
+    <input type="datetime-local" id="endTime" required>
+
+    <button onclick="generateSlots()">Generate Parking Slots</button>
+  </div>
+
+  <div class="status" id="statusContainer">
+    Available Slots: <span id="availableCount">0</span>
+  </div>
+
+  <div class="slot-container" id="slotContainer">
+    <!-- Parking slots will appear here -->
+  </div>
+
+  <div class="notification" id="notification"></div>
+
+  <script>
+    let parkingSlots = []; // Store slot data with vehicle type and booking time
+    const bookingLimits = { Car: 5, Bike: 10, Truck: 3 }; // Booking limits per vehicle type
+
+    // Load stored slots from LocalStorage on page load
+    window.onload = function() {
+      const savedSlots = localStorage.getItem("parkingSlots");
+      if (savedSlots) {
+        parkingSlots = JSON.parse(savedSlots);
+        updateUI();
+      }
+    };
+
+    // Generate parking slots based on user input
+    function generateSlots() {
+      const numSlots = document.getElementById("numSlots").value;
+      if (numSlots <= 0) {
+        alert("Please enter a valid number of slots.");
+        return;
+      }
+
+      // Create parking slots dynamically
+      parkingSlots = []; // Clear existing slots in case we regenerate
+      for (let i = 1; i <= numSlots; i++) {
+        parkingSlots.push({ 
+          slotNumber: i, 
+          status: "available", 
+          vehicleType: "", 
+          bookingTime: "", 
+          startTime: "", 
+          endTime: "" 
+        });
+      }
+
+      updateUI();
+    }
+
+    // Update the UI with the current parking slots
+    function updateUI() {
+      const slotContainer = document.getElementById("slotContainer");
+      const availableCount = document.getElementById("availableCount");
+      slotContainer.innerHTML = "";  // Clear existing slots
+      let availableSlots = 0;
+
+      // Create and display slots
+      parkingSlots.forEach((slot) => {
+        const slotDiv = document.createElement("div");
+        slotDiv.classList.add("slot");
+        if (slot.status === "available") {
+          slotDiv.classList.add("available");
+          availableSlots++;
+          slotDiv.innerHTML = <span>Slot ${slot.slotNumber}</span><br><span>Available</span>;
+          slotDiv.setAttribute("onclick", bookSlot(${slot.slotNumber}));
+        } else {
+          slotDiv.classList.add("booked");
+          slotDiv.innerHTML = <span>Slot ${slot.slotNumber}</span><br><span>Booked</span><br><span>${slot.vehicleType}</span><br><span>${slot.bookingTime}</span>;
+          slotDiv.setAttribute("onclick", unbookSlot(${slot.slotNumber}));
+        }
+        slotContainer.appendChild(slotDiv);
+      });
+
+      // Update the available slots count
+      availableCount.textContent = availableSlots;
+
+      // Save the slots in localStorage
+      localStorage.setItem("parkingSlots", JSON.stringify(parkingSlots));
+    }
+
+    // Book a parking slot
+    function bookSlot(slotNumber) {
+      const selectedSlot = parkingSlots.find(slot => slot.slotNumber === slotNumber);
+      const vehicleType = document.getElementById("vehicleType").value;
+      const startTime = document.getElementById("startTime").value;
+      const endTime = document.getElementById("endTime").value;
+
+      if (selectedSlot.status === "booked") {
+        showNotification("This slot is already booked!");
+        return;
+      }
+
+      // Check booking limits for vehicle type
+      const bookedSlots = parkingSlots.filter(slot => slot.status === "booked" && slot.vehicleType === vehicleType);
+      if (bookedSlots.length >= bookingLimits[vehicleType]) {
+        showNotification(Booking limit reached for ${vehicleType}.);
+        return;
+      }
+
+      selectedSlot.status = "booked";
+      selectedSlot.vehicleType = vehicleType;
+      selectedSlot.bookingTime = new Date().toLocaleString();
+      selectedSlot.startTime = startTime;
+      selectedSlot.endTime = endTime;
+
+      updateUI();
+      showNotification(Slot ${slotNumber} successfully booked!);
+    }
+
+    // Unbook a parking slot
+    function unbookSlot(slotNumber) {
+      const selectedSlot = parkingSlots.find(slot => slot.slotNumber === slotNumber);
+
+      if (selectedSlot.status === "available") {
+        showNotification("This slot is not booked yet.");
+        return;
+      }
+
+      selectedSlot.status = "available";
+      selectedSlot.vehicleType = "";
+      selectedSlot.bookingTime = "";
+      selectedSlot.startTime = "";
+      selectedSlot.endTime = "";
+
+      updateUI();
+      showNotification(Slot ${slotNumber} successfully unbooked!);
+    }
+
+    // Show notifications
+    function showNotification(message) {
+      const notification = document.getElementById("notification");
+      notification.textContent = message;
+      notification.style.display = "block";
+      setTimeout(() => {
+        notification.style.display = "none";
+      }, 3000);
+    }
+
+  </script>
+
+</body>
+</html>
